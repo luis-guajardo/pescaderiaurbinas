@@ -164,6 +164,15 @@
   margin: 0 auto 20px;
 }
 
+.manual-order {
+  max-width: 430px;
+  margin: 0 auto 20px;
+}
+
+@media(max-width:800px) {
+  .manual-order { margin-left: 5vw; margin-right: 5vw; }
+}
+
 .order-detail {
   padding: 16px 0;
   border-top: 1px solid var(--line);
