@@ -14,6 +14,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "cambia-esta-clave-en-produccion"
 app.config["DATABASE"] = DATABASE
 app.config["UPLOAD_FOLDER"] = BASE_DIR / "static" / "products"
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 
 def get_db():
@@ -172,6 +174,19 @@ def format_clp(value):
     return f"${int(round(float(value))):,}".replace(",", ".")
 
 
+def save_product_image(image):
+    if image is None or not image.filename:
+        return ""
+    safe_name = secure_filename(image.filename)
+    extension = safe_name.rsplit(".", 1)[-1].lower() if "." in safe_name else ""
+    if not safe_name or extension not in ALLOWED_IMAGE_EXTENSIONS:
+        return ""
+    app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
+    image_path = f"products/{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
+    image.save(BASE_DIR / "static" / image_path)
+    return image_path
+
+
 @app.get("/api/version")
 def database_version():
     return jsonify(version=app.config["DATABASE"].stat().st_mtime_ns)
@@ -305,14 +320,7 @@ def seller_dashboard():
 @role_required("seller")
 def create_product():
     db = get_db()
-    image = request.files.get("image")
-    image_path = ""
-    if image and image.filename:
-        safe_name = secure_filename(image.filename)
-        if safe_name:
-            app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
-            image_path = f"products/{datetime.now().strftime('%Y%m%d%H%M%S')}_{safe_name}"
-            image.save(BASE_DIR / "static" / image_path)
+    image_path = save_product_image(request.files.get("image"))
     db.execute("INSERT INTO products (name, category, description, price, stock, unit, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)", (request.form["name"], request.form["category"], request.form["description"], float(request.form["price"]), float(request.form["stock"]), request.form["unit"], image_path))
     db.commit()
     return redirect(url_for("seller_dashboard"))
@@ -327,13 +335,9 @@ def update_product(product_id):
         flash("Producto no encontrado.", "error")
         return redirect(url_for("seller_dashboard"))
     image_path = product["image_path"] or ""
-    image = request.files.get("image")
-    if image and image.filename:
-        safe_name = secure_filename(image.filename)
-        if safe_name:
-            app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
-            image_path = f"products/{datetime.now().strftime('%Y%m%d%H%M%S')}_{safe_name}"
-            image.save(BASE_DIR / "static" / image_path)
+    new_image_path = save_product_image(request.files.get("image"))
+    if new_image_path:
+        image_path = new_image_path
     db.execute(
         "UPDATE products SET name = ?, category = ?, description = ?, price = ?, stock = ?, unit = ?, image_path = ? WHERE id = ?",
         (request.form["name"], request.form["category"], request.form["description"], float(request.form["price"]), float(request.form["stock"]), request.form["unit"], image_path, product_id),
