@@ -159,6 +159,47 @@
   margin: 0 auto 70px;
 }
 
+.order-details {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+}
+
+.order-detail {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.order-detail-head,
+.order-items {
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr 1fr .8fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.order-detail-head {
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.order-items {
+  grid-template-columns: 1fr 1fr;
+  padding: 10px 12px;
+  background: var(--paper);
+  font-size: 12px;
+}
+
+.items-heading {
+  color: var(--muted);
+  font: 10px 'DM Mono', monospace;
+  text-transform: uppercase;
+}
+
+@media(max-width:800px) {
+  .order-details { margin-left: 5vw; margin-right: 5vw; }
+  .order-detail-head { grid-template-columns: 1fr 1fr; }
+}
+
 .product-manager-list {
   display: grid;
   gap: 12px;
