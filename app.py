@@ -64,6 +64,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             buyer_id INTEGER NOT NULL,
             voucher_id INTEGER,
+            customer_name TEXT DEFAULT '',
             status TEXT NOT NULL DEFAULT 'Pendiente',
             total REAL NOT NULL,
             created_at TEXT NOT NULL,
@@ -84,6 +85,9 @@ def init_db():
     product_columns = {row[1] for row in db.execute("PRAGMA table_info(products)").fetchall()}
     if "image_path" not in product_columns:
         db.execute("ALTER TABLE products ADD COLUMN image_path TEXT DEFAULT ''")
+    order_columns = {row[1] for row in db.execute("PRAGMA table_info(orders)").fetchall()}
+    if "customer_name" not in order_columns:
+        db.execute("ALTER TABLE orders ADD COLUMN customer_name TEXT DEFAULT ''")
     seller_accounts = [
         ("Bastian Urbina", "bastian@urbina.cl"),
         ("Ignacio Urbina", "ignacio@urbinas.cl"),
@@ -285,7 +289,7 @@ def buyer_orders():
 def seller_dashboard():
     db = get_db()
     products = db.execute("SELECT * FROM products ORDER BY active DESC, name").fetchall()
-    orders = db.execute("SELECT orders.*, users.name AS buyer_name FROM orders JOIN users ON users.id = orders.buyer_id ORDER BY created_at DESC").fetchall()
+    orders = db.execute("SELECT orders.*, COALESCE(NULLIF(orders.customer_name, ''), users.name) AS buyer_name FROM orders JOIN users ON users.id = orders.buyer_id ORDER BY created_at DESC").fetchall()
     order_items = {
         order["id"]: db.execute(
             "SELECT order_items.*, products.name AS product_name, products.unit FROM order_items JOIN products ON products.id = order_items.product_id WHERE order_items.order_id = ?",
@@ -336,6 +340,31 @@ def update_product(product_id):
     )
     db.commit()
     flash("Producto actualizado.", "success")
+    return redirect(url_for("seller_dashboard"))
+
+
+@app.post("/vendedor/pedidos/manual")
+@role_required("seller")
+def create_manual_order():
+    db = get_db()
+    buyer = db.execute("SELECT id FROM users WHERE email = ?", ("cliente@urbinas.local",)).fetchone()
+    product = db.execute("SELECT id FROM products WHERE id = ? AND active = 1", (request.form["product_id"],)).fetchone()
+    if buyer is None or product is None:
+        flash("Selecciona un producto valido.", "error")
+        return redirect(url_for("seller_dashboard"))
+    quantity = float(request.form["quantity"])
+    unit_price = float(request.form["unit_price"])
+    total = float(request.form["total"])
+    order = db.execute(
+        "INSERT INTO orders (buyer_id, customer_name, status, total, created_at) VALUES (?, ?, ?, ?, ?)",
+        (buyer["id"], request.form["customer_name"].strip(), "Pendiente", total, datetime.now().isoformat(timespec="minutes")),
+    )
+    db.execute(
+        "INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)",
+        (order.lastrowid, product["id"], quantity, unit_price),
+    )
+    db.commit()
+    flash("Pedido manual guardado.", "success")
     return redirect(url_for("seller_dashboard"))
 
 
