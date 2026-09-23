@@ -169,6 +169,25 @@
   margin: 0 auto 20px;
 }
 
+.manual-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.add-line {
+  margin: 8px 0 16px;
+  background: var(--teal);
+}
+
+.remove-row {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--coral);
+  cursor: pointer;
+  font-size: 11px;
+}
+
 @media(max-width:800px) {
   .manual-order { margin-left: 5vw; margin-right: 5vw; }
 }
