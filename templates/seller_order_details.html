@@ -1,0 +1,9 @@
+<section class="table-panel order-details">
+  <div class="panel-title"><div><p class="eyebrow">Preparacion</p><h2>Cantidades solicitadas</h2></div><span class="hint">Detalle de cada pedido</span></div>
+  {% for order in orders %}
+  <article class="order-detail">
+    <div class="order-detail-head"><strong>#{{ '%04d'|format(order['id']) }}</strong><span>{{ order['buyer_name'] }}</span><span>{{ order['created_at'] }}</span><span class="status">{{ order['status'] }}</span></div>
+    <div class="order-items"><span class="items-heading">Producto</span><span class="items-heading">Cantidad pedida</span>{% for item in order_items[order['id']] %}<span>{{ item['product_name'] }}</span><strong>{{ item['quantity'] }} {{ item['unit'] }}</strong>{% else %}<span class="hint">Sin productos asociados.</span>{% endfor %}</div>
+  </article>
+  {% else %}<p class="hint">Aun no hay pedidos registrados.</p>{% endfor %}
+</section>
