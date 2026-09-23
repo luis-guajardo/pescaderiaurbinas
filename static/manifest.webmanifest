@@ -1,0 +1,10 @@
+{
+  "name": "Pescaderia Urbina's",
+  "short_name": "Urbina's",
+  "description": "Pedidos y mercaderia fresca de Pescaderia Urbina's",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f4ee",
+  "theme_color": "#1f6f69"
+}
