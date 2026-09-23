@@ -340,7 +340,7 @@ def update_product(product_id):
         image_path = new_image_path
     db.execute(
         "UPDATE products SET name = ?, category = ?, description = ?, price = ?, stock = ?, unit = ?, image_path = ? WHERE id = ?",
-        (request.form["name"], request.form["category"], request.form["description"], float(request.form["price"]), float(request.form["stock"]), request.form["unit"], image_path, product_id),
+        (request.form["name"], request.form["category"], request.form["description"], float(request.form["price"]), float(request.form["stock"]), request.form.get("unit", "kg"), image_path, product_id),
     )
     db.commit()
     flash("Producto actualizado.", "success")
@@ -352,21 +352,27 @@ def update_product(product_id):
 def create_manual_order():
     db = get_db()
     buyer = db.execute("SELECT id FROM users WHERE email = ?", ("cliente@urbinas.local",)).fetchone()
-    product = db.execute("SELECT id FROM products WHERE id = ? AND active = 1", (request.form["product_id"],)).fetchone()
-    if buyer is None or product is None:
-        flash("Selecciona un producto valido.", "error")
+    product_ids = request.form.getlist("product_id[]")
+    quantities = request.form.getlist("quantity[]")
+    unit_prices = request.form.getlist("unit_price[]")
+    if buyer is None or not product_ids or len(product_ids) != len(quantities) or len(product_ids) != len(unit_prices):
+        flash("Agrega al menos un producto valido.", "error")
         return redirect(url_for("seller_dashboard"))
-    quantity = float(request.form["quantity"])
-    unit_price = float(request.form["unit_price"])
-    total = float(request.form["total"])
+    lines = []
+    for product_id, quantity, unit_price in zip(product_ids, quantities, unit_prices):
+        product = db.execute("SELECT id FROM products WHERE id = ? AND active = 1", (product_id,)).fetchone()
+        if product is None:
+            flash("Uno de los productos no es valido.", "error")
+            return redirect(url_for("seller_dashboard"))
+        line_quantity = float(quantity)
+        line_price = float(unit_price)
+        lines.append((product["id"], line_quantity, line_price))
+    total = round(sum(quantity * unit_price for _, quantity, unit_price in lines), 0)
     order = db.execute(
         "INSERT INTO orders (buyer_id, customer_name, status, total, created_at) VALUES (?, ?, ?, ?, ?)",
         (buyer["id"], request.form["customer_name"].strip(), "Pendiente", total, datetime.now().isoformat(timespec="minutes")),
     )
-    db.execute(
-        "INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)",
-        (order.lastrowid, product["id"], quantity, unit_price),
-    )
+    db.executemany("INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)", [(order.lastrowid, product_id, quantity, unit_price) for product_id, quantity, unit_price in lines])
     db.commit()
     flash("Pedido manual guardado.", "success")
     return redirect(url_for("seller_dashboard"))
