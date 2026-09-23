@@ -84,12 +84,19 @@ def init_db():
     product_columns = {row[1] for row in db.execute("PRAGMA table_info(products)").fetchall()}
     if "image_path" not in product_columns:
         db.execute("ALTER TABLE products ADD COLUMN image_path TEXT DEFAULT ''")
-    seller = db.execute("SELECT id FROM users WHERE email = ?", ("vendedor@urbinas.local",)).fetchone()
-    if seller is None:
-        db.execute(
-            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
-            ("Vendedor principal", "vendedor@urbinas.local", generate_password_hash("vendedor123"), "seller"),
-        )
+    seller_accounts = [
+        ("Bastian Urbina", "bastian@urbina.cl"),
+        ("Ignacio Urbina", "ignacio@urbinas.cl"),
+        ("Lorena Urbina", "lorena@urbina.cl"),
+    ]
+    db.execute("DELETE FROM users WHERE email = ?", ("vendedor@urbinas.local",))
+    for seller_name, seller_email in seller_accounts:
+        seller = db.execute("SELECT id FROM users WHERE email = ?", (seller_email,)).fetchone()
+        if seller is None:
+            db.execute(
+                "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+                (seller_name, seller_email, generate_password_hash("12345678"), "seller"),
+            )
     buyer = db.execute("SELECT id FROM users WHERE email = ?", ("cliente@urbinas.local",)).fetchone()
     if buyer is None:
         db.execute(
@@ -279,8 +286,15 @@ def seller_dashboard():
     db = get_db()
     products = db.execute("SELECT * FROM products ORDER BY active DESC, name").fetchall()
     orders = db.execute("SELECT orders.*, users.name AS buyer_name FROM orders JOIN users ON users.id = orders.buyer_id ORDER BY created_at DESC").fetchall()
+    order_items = {
+        order["id"]: db.execute(
+            "SELECT order_items.*, products.name AS product_name, products.unit FROM order_items JOIN products ON products.id = order_items.product_id WHERE order_items.order_id = ?",
+            (order["id"],),
+        ).fetchall()
+        for order in orders
+    }
     vouchers = db.execute("SELECT * FROM vouchers ORDER BY valid_until DESC").fetchall()
-    return render_template("seller.html", products=products, orders=orders, vouchers=vouchers)
+    return render_template("seller.html", products=products, orders=orders, order_items=order_items, vouchers=vouchers)
 
 
 @app.post("/vendedor/productos")

@@ -34,7 +34,7 @@ La base de datos `pescaderia.db` se crea automaticamente al iniciar por primera 
 
 ## Usuarios de demostracion
 
-- Vendedor: `vendedor@urbinas.local` / `vendedor123`
+- Vendedores: `bastian@urbina.cl`, `ignacio@urbinas.cl` o `lorena@urbina.cl` / `12345678`
 - Comprador: `cliente@urbinas.local` / `cliente123`
 
 El vendedor puede agregar productos, crear vales y actualizar estados de pedidos. El comprador puede agregar mercaderia al pedido, aplicar un vale y consultar su historial.
