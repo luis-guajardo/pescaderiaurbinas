@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f6f69">
+  <meta name="description" content="Pedidos y mercaderia fresca de Pescaderia Urbina's">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <title>{% block title %}Pescaderia Urbina's{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='logo.css') }}">
+</head>
+<body data-db-version="{{ database_version }}">
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}"><span>Pescaderia<br><strong>Urbina´s</strong></span></a>
+    <nav>
+      <a href="{{ url_for('index') }}">Catalogo</a>
+      <a href="{{ url_for('cart') }}">Pedido <span class="badge">{{ cart_count|int }}</span></a>
+      {% if g.user and g.user['role'] == 'seller' %}<a href="{{ url_for('seller_dashboard') }}">Panel vendedor</a>{% endif %}
+      {% if g.user and g.user['role'] == 'buyer' %}<a href="{{ url_for('buyer_orders') }}">Mis pedidos</a>{% endif %}
+      {% if g.user %}<a class="quiet" href="{{ url_for('logout') }}">Salir</a>{% else %}<a class="quiet" href="{{ url_for('register') }}">Crear cuenta</a><a class="button small" href="{{ url_for('login') }}">Entrar</a>{% endif %}
+    </nav>
+  </header>
+  <main>{% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main>
+  <footer class="site-footer"><div><strong>Contacto</strong><a href="tel:+56950087290">+56 9 5008 7290</a><a href="tel:+56945918134">+56 9 4591 8134</a></div><div><strong><span class="gps-mark" aria-hidden="true"></span> Donde encontrarnos</strong><span>Martes y viernes: Feria de Victoria</span><span>Sabados: Ferias de J.J. Perez</span><span>Domingos: Feria de Serrano</span></div><span>© 2026 Urbina's</span></footer>
+  <script>
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('{{ url_for('static', filename='sw.js') }}')); }
+    const initialDatabaseVersion = document.body.dataset.dbVersion;
+    setInterval(async () => {
+      const active = document.activeElement;
+      if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return;
+      try {
+        const response = await fetch('{{ url_for('database_version') }}', { cache: 'no-store' });
+        const data = await response.json();
+        if (String(data.version) !== initialDatabaseVersion) window.location.reload();
+      } catch (_error) {
+        // The next interval retries when the connection returns.
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
