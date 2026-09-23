@@ -180,7 +180,7 @@ def save_product_image(image):
     safe_name = secure_filename(image.filename)
     extension = safe_name.rsplit(".", 1)[-1].lower() if "." in safe_name else ""
     if not safe_name or extension not in ALLOWED_IMAGE_EXTENSIONS:
-        return ""
+        raise ValueError("Usa una imagen PNG, JPG, JPEG o WEBP.")
     app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
     image_path = f"products/{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{safe_name}"
     image.save(BASE_DIR / "static" / image_path)
@@ -190,6 +190,12 @@ def save_product_image(image):
 @app.get("/api/version")
 def database_version():
     return jsonify(version=app.config["DATABASE"].stat().st_mtime_ns)
+
+
+@app.errorhandler(413)
+def file_too_large(_error):
+    flash("La imagen es demasiado grande. El maximo permitido es 5 MB.", "error")
+    return redirect(url_for("seller_dashboard"))
 
 
 @app.route("/")
@@ -320,7 +326,11 @@ def seller_dashboard():
 @role_required("seller")
 def create_product():
     db = get_db()
-    image_path = save_product_image(request.files.get("image"))
+    try:
+        image_path = save_product_image(request.files.get("image"))
+    except ValueError as error:
+        flash(str(error), "error")
+        return redirect(url_for("seller_dashboard"))
     db.execute("INSERT INTO products (name, category, description, price, stock, unit, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)", (request.form["name"], request.form["category"], request.form["description"], float(request.form["price"]), float(request.form["stock"]), request.form["unit"], image_path))
     db.commit()
     return redirect(url_for("seller_dashboard"))
@@ -335,7 +345,11 @@ def update_product(product_id):
         flash("Producto no encontrado.", "error")
         return redirect(url_for("seller_dashboard"))
     image_path = product["image_path"] or ""
-    new_image_path = save_product_image(request.files.get("image"))
+    try:
+        new_image_path = save_product_image(request.files.get("image"))
+    except ValueError as error:
+        flash(str(error), "error")
+        return redirect(url_for("seller_dashboard"))
     if new_image_path:
         image_path = new_image_path
     db.execute(
